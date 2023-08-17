@@ -1,0 +1,28 @@
+:name: Zynq-7000 SoC
+:description: This script runs Linux on Zynq-7000 SoC.
+
+using sysbus
+$name?="Zynq"
+mach create $name
+
+machine LoadPlatformDescription @platforms/cpus/zynq-7000.repl
+showAnalyzer uart0
+sysbus Redirect 0xC0000000 0x0 0x10000000
+
+$bin?=@https://dl.antmicro.com/projects/renode/zynq--interface-tests-vmlinux-s_13786812-358d50a2341a6aa3cf77a76785eb0d85da155584
+$rootfs?=@https://dl.antmicro.com/projects/renode/zynq--interface-tests-rootfs.ext2-s_16777216-fee8570fbbf8a0036e7398e637cc996e16e634ca
+$dtb?=@https://dl.antmicro.com/projects/renode/zynq--interface-tests.dtb-s_11584-259c5615d3cf747b4d5420f69a20a0d7f374a9bf
+
+# Set timer frequency
+ttc0 Frequency 33333333
+ttc1 Frequency 33333333
+
+# Set registers
+cpu SetRegisterUnsafe 0 0x000
+cpu SetRegisterUnsafe 1 0xD32 # processor variant (cortex-a9)
+cpu SetRegisterUnsafe 2 0x100 # device tree address
+
+sysbus LoadELF $bin
+sysbus LoadFdt $dtb 0x100 "console=ttyPS0,115200 root=/dev/ram0 rw initrd=0x1a000000,16M" false
+sysbus ZeroRange 0x1a000000 0x800000
+sysbus LoadBinary $rootfs 0x1a000000
